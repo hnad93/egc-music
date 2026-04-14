@@ -1,0 +1,27 @@
+name: Auto Generate Playlist
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Generate JSON
+        run: |
+          echo "[" > playlist.json
+          first=true
+          for f in MUSIC/*.{mp3,m4a,wav,ogg,flac}; do
+            [ -e "$f" ] || continue
+            if [ "$first" = true ]; then first=false; else echo "," >> playlist.json; fi
+            filename=$(basename "$f" | sed 's/\.[^.]*$//')
+            # Link CDN để phát nhạc mượt nhất
+            url="https://cdn.jsdelivr.net/gh/${{ github.repository }}@main/$f"
+            echo "{\"name\": \"$filename\", \"url\": \"$url\", \"source\": \"GitHub\"}" >> playlist.json
+          done
+          echo "]" >> playlist.json
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add playlist.json
+          git commit -m "Auto update playlist" || exit 0
+          git push
